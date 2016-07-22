@@ -1,0 +1,22 @@
+# Backup files left behind by the Emacs editor.
+*~
+
+# Maven binaries
+target
+
+# Eclipse project files and other temp files
+.project
+.settings
+.classpath
+
+# Intellij
+.idea/
+*.iml
+*.iws
+
+# Mac
+.DS_Store
+
+# Maven
+log/
+target/
