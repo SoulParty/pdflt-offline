@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-import iaik.asn1.structures.AlgorithmID;
 import iaik.pkcs.pkcs11.DefaultInitializeArgs;
 import iaik.pkcs.pkcs11.Info;
 import iaik.pkcs.pkcs11.Mechanism;
@@ -26,7 +25,6 @@ import iaik.pkcs.pkcs11.objects.X509PublicKeyCertificate;
 import iaik.pkcs.pkcs11.provider.Constants;
 import iaik.pkcs.pkcs11.provider.IAIKPkcs11;
 import iaik.pkcs.pkcs11.wrapper.PKCS11Constants;
-import iaik.pkcs.pkcs7.DigestInfo;
 import lt.nortal.components.unisign.applet.SigningApplet;
 import lt.nortal.components.unisign.applet.infrastructure.InfrastructureException;
 import lt.nortal.components.unisign.applet.infrastructure.SignatureInfrastructure;
@@ -61,9 +59,9 @@ public class MacPKCS11Infrastructure implements SignatureInfrastructure {
 			Token token = slotsWithToken[SLOT_NUMBER].getToken();
 
 			session = token.openSession(Token.SessionType.SERIAL_SESSION,
-							Token.SessionReadWriteBehavior.RW_SESSION,
-							null,
-							null);
+					Token.SessionReadWriteBehavior.RW_SESSION,
+					null,
+					null);
 			session.login(Session.UserType.SO, pin.toCharArray());
 
 			// we search for a RSA private key which we can use for signing
@@ -82,9 +80,10 @@ public class MacPKCS11Infrastructure implements SignatureInfrastructure {
 				RSAPrivateKey signatureKey = (RSAPrivateKey) matchingKeys[0];
 				// select the signature mechanism, ensure your token supports it
 				Mechanism signatureMechanism = Mechanism.get(PKCS11Constants.CKM_RSA_PKCS);
+
 				// initialize for signing
 				session.signInit(signatureMechanism, signatureKey);
-				return session.sign(bytes); // bytes jau "negeri"
+				return session.sign(bytes);
 			} else {
 				session.findObjectsFinal();
 				throw new InfrastructureException(InfrastructureException.Code.SIGN_ERROR);

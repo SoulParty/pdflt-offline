@@ -1,6 +1,7 @@
 package lt.nortal.pdflt;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -20,6 +21,9 @@ import iaik.pkcs.pkcs11.objects.X509PublicKeyCertificate;
 import iaik.pkcs.pkcs11.provider.Constants;
 import iaik.pkcs.pkcs11.provider.IAIKPkcs11;
 import iaik.pkcs.pkcs11.wrapper.PKCS11Constants;
+import lt.webmedia.sigute.service.common.utils.Base64;
+import sun.security.util.DerInputStream;
+import sun.security.util.DerValue;
 
 /**
  * Created by DK on 7/19/16.
@@ -101,6 +105,14 @@ public class TestReadSmartCard {
 		}
 	}
 
+	@Test
+	public void derRead() throws IOException {
+		byte[] var = Base64.decode
+//				("MYGVMBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDcyMzE3NTYwMVowIwYJKoZIhvcNAQkEMRYEFBlQQH0dIf3uVmEHJNopRedBaZLvMDYGCyqGSIb3DQEJEAIvMScwJTAjMCEwCQYFKw4DAhoFAAQUwIuU9VQzAr6/YjRVruxRlJH2kSI=");
+				("MYGVMBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDcyMjIxMDMzNFowIwYJKoZIhvcNAQkEMRYEFOqo9pXn4DoLnwyA9RhCxkq2RnxDMDYGCyqGSIb3DQEJEAIvMScwJTAjMCEwCQYFKw4DAhoFAAQUU1eGETD5wxF3xehqV0TNVZN+NQ8=");
+		DerInputStream var2 = new DerInputStream(var);
+		DerValue[] var3 = var2.getSequence(2);
+	}
 //
 //	@Test
 //	public void testPKCS1viaPKCS11() throws Exception {

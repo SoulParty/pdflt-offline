@@ -141,6 +141,18 @@ public class FormView extends javax.swing.JFrame {
 
 		if (presignData != null) {
 			byte[] dataToSign = presignData.getBytesToSign();
+
+//			if (!OperatingSystem.isWindows()) {
+//				byte[] DER_encoded_SHA1_AlgorithmIdentifier = { 0x30, 0x21, 0x30, 0x09, 0x06, 0x05, 0x2b, 0x0e, 0x03, 0x02, 0x1a, 0x05, 0x00, 0x04,
+//						0x14
+//				};
+//				byte[] hash2sign = new byte[DER_encoded_SHA1_AlgorithmIdentifier.length + dataToSign.length];
+//				System.arraycopy(DER_encoded_SHA1_AlgorithmIdentifier, 0, hash2sign, 0, DER_encoded_SHA1_AlgorithmIdentifier.length);
+//				System.arraycopy(dataToSign, 0, hash2sign, DER_encoded_SHA1_AlgorithmIdentifier.length, dataToSign.length);
+//				dataToSign = hash2sign;
+//			}
+
+
 			String encodedDataToSign = Base64.encode(dataToSign);
 			signingService.sign(encodedDataToSign, certificate);
 		}

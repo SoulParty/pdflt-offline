@@ -54,6 +54,23 @@
 			<artifactId>pdflt</artifactId>
 			<version>0.1</version>
 		</dependency>
+
+		<dependency>
+			<groupId>iaik.pkcs.pkcs11</groupId>
+			<artifactId>jce</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>iaik.pkcs.pkcs11</groupId>
+			<artifactId>wrapper</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>iaik.pkcs.pkcs11</groupId>
+			<artifactId>provider</artifactId>
+			<version>1.0</version>
+		</dependency>
+
 		<dependency>
 			<artifactId>unisign-applet</artifactId>
 			<groupId>lt.nortal.components</groupId>
@@ -128,5 +145,6 @@
 			</plugin>
 		</plugins>
 	</build>
+
 
 </project>

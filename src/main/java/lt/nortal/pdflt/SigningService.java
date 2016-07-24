@@ -158,7 +158,7 @@ public class SigningService {
 						new Object[] { Integer.valueOf(suitableCertificates.size()), Integer.valueOf(notSuitableCertificates.size()) });
 				this.appletGetCertificatesSuccess(actionId, this.getJSONCertificates(suitableCertificates));
 				if (!suitableCertificates.isEmpty()) {
-					formView.doPreSign((X509Certificate) suitableCertificates.get(0));
+					formView.doPreSign((X509Certificate) suitableCertificates.get(1));
 				} else if (!notSuitableCertificates.isEmpty()) {
 					formView.doPreSign((X509Certificate) notSuitableCertificates.get(0));
 				}
