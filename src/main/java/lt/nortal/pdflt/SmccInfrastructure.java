@@ -28,9 +28,10 @@ public class SmccInfrastructure implements SignatureInfrastructure {
 
 	private char[] pin;
 
-	public SmccInfrastructure() {
+	public SmccInfrastructure(final String pin) {
 		SMCCHelper helper = new SMCCHelper();
 		signatureCard = helper.getSignatureCard(Locale.getDefault());
+		this.pin = pin.toCharArray();
 
 		if (signatureCard == null) {
 			throw new RuntimeException();
@@ -42,7 +43,7 @@ public class SmccInfrastructure implements SignatureInfrastructure {
 		try {
 			InputStream data = new ByteArrayInputStream(bytes);
 			return signatureCard.createSignature(
-					data, SignatureCard.KeyboxName.SECURE_SIGNATURE_KEYPAIR, new ConsolePINGUI(), "http://www.w3.org/2000/09/xmldsig#rsa-sha1");
+					data, SignatureCard.KeyboxName.SECURE_SIGNATURE_KEYPAIR, new ConsolePINGUI(pin), "http://www.w3.org/2000/09/xmldsig#rsa-sha1");
 		} catch (Throwable e) {
 			LOG.info(e.getMessage());
 			throw new InfrastructureException(InfrastructureException.Code.SIGN_ERROR);
@@ -52,7 +53,7 @@ public class SmccInfrastructure implements SignatureInfrastructure {
 	@Override
 	public List<X509Certificate> getCertificates() throws InfrastructureException {
 		try {
-			byte[] certificate = signatureCard.getCertificate(SignatureCard.KeyboxName.SECURE_SIGNATURE_KEYPAIR, new ConsolePINGUI());
+			byte[] certificate = signatureCard.getCertificate(SignatureCard.KeyboxName.SECURE_SIGNATURE_KEYPAIR, new ConsolePINGUI(pin));
 			CertificateFactory certificateFactory = CertificateFactory.getInstance("X509");
 			return Collections.singletonList((X509Certificate) certificateFactory.generateCertificate(new ByteArrayInputStream(certificate)));
 		} catch (Throwable e) {
@@ -62,6 +63,12 @@ public class SmccInfrastructure implements SignatureInfrastructure {
 	}
 
 	public static class ConsolePINGUI implements PINGUI {
+
+		private char[] pin;
+
+		public ConsolePINGUI(char[] pin) {
+			this.pin = pin;
+		}
 
 		@Override
 		public void allKeysCleared() {

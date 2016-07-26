@@ -18,10 +18,8 @@ import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 import be.cardon.utils.OperatingSystem;
-import iaik.pkcs.pkcs11.provider.Constants;
 import lt.nortal.components.unisign.applet.SigningApplet;
 import lt.nortal.components.unisign.applet.infrastructure.InfrastructureException;
-import lt.nortal.components.unisign.applet.infrastructure.PKCS11SignatureInfrastructure;
 import lt.nortal.components.unisign.applet.infrastructure.SignatureInfrastructure;
 import lt.nortal.components.unisign.applet.infrastructure.WindowsSignatureInfrastructure;
 import lt.nortal.components.unisign.utils.Base64;
@@ -79,10 +77,7 @@ public class SigningService {
 		if (OperatingSystem.isWindows()) {
 			this.infrastructure = new WindowsSignatureInfrastructure();
 		} else {
-			this.infrastructure = new MacPKCS11Infrastructure(
-					pin,
-					"/Library/EstonianIDCard/lib/esteid-pkcs11.so",
-					"/Library/libpkcs11wrapper.jnilib");
+			this.infrastructure = new SmccInfrastructure(pin);
 		}
 
 	}

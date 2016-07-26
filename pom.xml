@@ -53,32 +53,6 @@
 			<groupId>lt.nortal.pdflt</groupId>
 			<artifactId>pdflt</artifactId>
 			<version>0.1</version>
-			<exclusions>
-				<exclusion>
-					<artifactId>logback-core</artifactId>
-					<groupId>ch.qos.logback</groupId>
-				</exclusion>
-				<exclusion>
-					<artifactId>slf4j-log4j12</artifactId>
-					<groupId>org.slf4j</groupId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
-		<dependency>
-			<groupId>iaik.pkcs.pkcs11</groupId>
-			<artifactId>jce</artifactId>
-			<version>1.0</version>
-		</dependency>
-		<dependency>
-			<groupId>iaik.pkcs.pkcs11</groupId>
-			<artifactId>wrapper</artifactId>
-			<version>1.0</version>
-		</dependency>
-		<dependency>
-			<groupId>iaik.pkcs.pkcs11</groupId>
-			<artifactId>provider</artifactId>
-			<version>1.0</version>
 		</dependency>
 
 		<dependency>
