@@ -1,11 +1,24 @@
 package lt.nortal.pdflt;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStream;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Provider;
+import java.security.Security;
+import java.security.Signature;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import org.junit.Test;
 
@@ -21,14 +34,29 @@ import iaik.pkcs.pkcs11.objects.X509PublicKeyCertificate;
 import iaik.pkcs.pkcs11.provider.Constants;
 import iaik.pkcs.pkcs11.provider.IAIKPkcs11;
 import iaik.pkcs.pkcs11.wrapper.PKCS11Constants;
+import lt.nortal.components.unisign.applet.infrastructure.InfrastructureException;
 import lt.webmedia.sigute.service.common.utils.Base64;
-import sun.security.util.DerInputStream;
-import sun.security.util.DerValue;
 
 /**
  * Created by DK on 7/19/16.
  */
 public class TestReadSmartCard {
+
+	Logger logger = Logger.getLogger(TestReadSmartCard.class.getName());
+
+	private static final byte[] SHA256_PREFIX = {
+			(byte) 0x30, (byte) 0x31, (byte) 0x30, (byte) 0x0d, (byte) 0x06,
+			(byte) 0x09, (byte) 0x60, (byte) 0x86, (byte) 0x48, (byte) 0x01,
+			(byte) 0x65, (byte) 0x03, (byte) 0x04, (byte) 0x02, (byte) 0x01,
+			(byte) 0x05, (byte) 0x00, (byte) 0x04, (byte) 0x20
+	};
+
+	private static final byte[] SHA1_PREFIX = {
+			(byte) 0x30, (byte) 0x21, (byte) 0x30,
+			(byte) 0x09, (byte) 0x06, (byte) 0x05, (byte) 0x2b,
+			(byte) 0x0e, (byte) 0x03, (byte) 0x02, (byte) 0x1a,
+			(byte) 0x05, (byte) 0x00, (byte) 0x04, (byte) 0x14
+	};
 
 	@Test
 	public void testIAIK() {
@@ -39,7 +67,6 @@ public class TestReadSmartCard {
 			Module module = IAIKPkcs11.getModule(properties);
 			module.initialize(new DefaultInitializeArgs());
 			Info info = module.getInfo();
-			System.out.println(info);
 			// list all slots (readers) in which there is currenlty a token present
 			Slot[] slotsWithToken =
 					module.getSlotList(Module.SlotRequirement.TOKEN_PRESENT);
@@ -47,11 +74,12 @@ public class TestReadSmartCard {
 			Token token = slotsWithToken[1].getToken(); // Signature token
 			Session session =
 					token.openSession(Token.SessionType.SERIAL_SESSION,
-							Token.SessionReadWriteBehavior.RO_SESSION,
+							Token.SessionReadWriteBehavior.RW_SESSION,
 							null,
 							null);
 
-			session.login(Session.UserType.SO, "04033".toCharArray());
+			session.login(Session.UserType.USER, "04033".toCharArray());
+			session.getSessionInfo();
 
 			// we search for a RSA private key which we can use for signing
 			RSAPrivateKey searchTemplate = new RSAPrivateKey();
@@ -78,23 +106,43 @@ public class TestReadSmartCard {
 				CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
 				X509Certificate x509Certificate = (X509Certificate) certificateFactory.generateCertificate(stream);
 
-				byte[] data =
-//						("Hello-World!!!!!!!!aa"
-//								+ "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-//								+ "!!!!!!!!!!!!!!!!!!!!!!") // < 128 baitai
-						("Hello-World!!!!!!!!aa"
-								+ "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-								+ "!!!!!!!!!!!!!!!!!!!!!!!!!!!") //128 baitai
-								.getBytes();
-//				byte[] data = "hello world".getBytes();
-				// select the signature mechanism, ensure your token supports it
-				Mechanism signatureMechanism = Mechanism.get(PKCS11Constants.CKM_RSA_PKCS);
 
-				// initialize for signing
-				session.signInit(signatureMechanism, signatureKey);
-				byte[] signatureValue = session.sign(data);
-				System.out.println(signatureValue);
+				MessageDigest md;
+				byte[] digest;
+				try {
+					InputStream in = new FileInputStream(new File("/Users/DK/Desktop/pdfa2a.pdf"));
+					md = MessageDigest.getInstance("SHA-1");
+					// calculate message digest
+					digest = new byte[md.getDigestLength()];
+					for (int l; (l = in.read(digest)) != -1;) {
+						md.update(digest, 0, l);
+					}
+					digest = md.digest();
+//					byte[] digest = Base64.decode("fuLJAyekLoKHTiLTIztYTdbP3lQt6Tv6M2jeMIrd1F0=");
 
+					byte[] hashToSign = new byte[SHA1_PREFIX.length + digest.length];
+					System.arraycopy(SHA1_PREFIX, 0, hashToSign, 0, SHA1_PREFIX.length);
+					System.arraycopy(digest, 0, hashToSign, SHA1_PREFIX.length, digest.length);
+
+					// select the signature mechanism, ensure your token supports it
+					Mechanism signatureMechanism = Mechanism.get(PKCS11Constants.CKM_RSA_PKCS);
+					// initialize for signing
+					session.signInit(signatureMechanism, signatureKey);
+					byte[] signatureBytes = session.sign(hashToSign);
+
+					Signature signature = Signature.getInstance("SHA1with" + x509Certificate.getPublicKey().getAlgorithm());
+					signature.initVerify(x509Certificate.getPublicKey());
+					signature.update(digest);
+
+					if (!signature.verify(signatureBytes)) {
+						throw new GeneralSecurityException("Failed to verify user signature using public key stored in the certificate.");
+					} else {
+						logger.info("Success");
+					}
+
+				} catch (NoSuchAlgorithmException e) {
+					logger.info("Failed to get MessageDigest.");
+				}
 			} else {
 				session.findObjectsFinal();
 				// we have not found a suitable key, we cannot contiue
@@ -105,32 +153,18 @@ public class TestReadSmartCard {
 		}
 	}
 
-	@Test
-	public void derRead() throws IOException {
-		byte[] var = Base64.decode
-//				("MYGVMBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDcyMzE3NTYwMVowIwYJKoZIhvcNAQkEMRYEFBlQQH0dIf3uVmEHJNopRedBaZLvMDYGCyqGSIb3DQEJEAIvMScwJTAjMCEwCQYFKw4DAhoFAAQUwIuU9VQzAr6/YjRVruxRlJH2kSI=");
-				("MYGVMBgGCSqGSIb3DQEJAzELBgkqhkiG9w0BBwEwHAYJKoZIhvcNAQkFMQ8XDTE2MDcyMjIxMDMzNFowIwYJKoZIhvcNAQkEMRYEFOqo9pXn4DoLnwyA9RhCxkq2RnxDMDYGCyqGSIb3DQEJEAIvMScwJTAjMCEwCQYFKw4DAhoFAAQUU1eGETD5wxF3xehqV0TNVZN+NQ8=");
-		DerInputStream var2 = new DerInputStream(var);
-		DerValue[] var3 = var2.getSequence(2);
-	}
-//
-//	@Test
+	//	@Test
 //	public void testPKCS1viaPKCS11() throws Exception {
-//		Logger logger = Logger.getLogger(TestReadSmartCard.class.getName());
-//
 //		SunPKCS11 provider = new SunPKCS11("/etc/registrucentras/pkcs11.cfg");
 //		Security.addProvider(provider);
 //		provider.login(null, new DummyCallbackHandler());
-//		KeyStore keyStore = KeyStore.getInstance("PKCS11", provider);
-//		keyStore.load(null, "0685".toCharArray());
-//		KeyStore.PasswordProtection protection = new KeyStore.PasswordProtection("0685".toCharArray());
+//		KeyStore.PasswordProtection protection = new KeyStore.PasswordProtection("04033".toCharArray());
 //		KeyStore.Builder builder = KeyStore.Builder.newInstance("PKCS11", provider, protection);
 //		KeyStore keyStore = builder.getKeyStore();
 //		keyStore.load(null, protection.getPassword());
 //		keyStore.load(null, "04033".toCharArray());
-//		keyStore.load(null, null);
-//		KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry("Authentication", null);
-//		KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry("PrivateKeyEntry", null);
+////		KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry("Authentication", null);
+//		KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry("Signature", null);
 //		PrivateKey privateKey = privateKeyEntry.getPrivateKey();
 //		Signature signature = Signature.getInstance("SHA1withRSA");
 //		signature.initSign(privateKey);
@@ -146,45 +180,45 @@ public class TestReadSmartCard {
 //		logger.info("original message: " + new String(Hex.encodeHex(messageBigInteger.toByteArray())));
 //	}
 //
-//	@Test
-//	public void testOtherMethod() {
-//		Provider provider = new sun.security.pkcs11.SunPKCS11("/etc/registrucentras/pkcs11.cfg");
-//		Security.addProvider(provider);
-//		KeyStore keyStore = null;
-//		String pin = "0685";
-//		String pin = "04033";
-//		try {
-//			keyStore = KeyStore.getInstance("PKCS11", provider);
-//			KeyStore.PasswordProtection pp = new KeyStore.PasswordProtection(pin.toCharArray());
-//			keyStore.load(null, pp.getPassword());
-//			Enumeration aliases = keyStore.aliases();
-//			while (aliases.hasMoreElements()) {
-//				Object alias = aliases.nextElement();
-//				try {
-//					X509Certificate cert0 = (X509Certificate) keyStore.getCertificate(alias.toString());
-//					System.out.println("I am: " + cert0.getSubjectDN().getName());
-//					PrivateKey privateKey = (PrivateKey) keyStore.getKey(alias.toString(), null);
-//					System.out.println("Private key: " + privateKey);
-//				} catch (Exception e) {
-//					continue;
-//				}
-//			}
-//			KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry("Signature", null);
-//			Signature signature = Signature.getInstance("SHA1withRSA");
-//			signature.initSign(privateKeyEntry.getPrivateKey());
-//			byte[] toBeSigned = "hello world".getBytes();
-//			signature.update(toBeSigned);
-//			byte[] signatureValue = signature.sign();
-//			Security.removeProvider(provider.getName());
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//	}
-//
-//	@Test
-//	public void testOtherMethod2() throws InfrastructureException, KeyStoreException {
-//		PKCS11SignatureInfrastructure2 pkcs11SignatureInfrastructure2 = new PKCS11SignatureInfrastructure2("/etc/registrucentras/pkcs11.cfg");
-//		X509Certificate certificate = pkcs11SignatureInfrastructure2.getCertificate();
-//		byte[] signedBytes = pkcs11SignatureInfrastructure2.sign(certificate, "Hello World".getBytes());
-//	}
+	@Test
+	public void testSunPKCS11() {
+		Provider provider = new sun.security.pkcs11.SunPKCS11("/etc/registrucentras/pkcs11.cfg");
+		Security.addProvider(provider);
+		KeyStore keyStore = null;
+		char[] pin = "04033".toCharArray();
+		try {
+			keyStore = KeyStore.getInstance("PKCS11", provider);
+			KeyStore.PasswordProtection pp = new KeyStore.PasswordProtection(pin);
+			keyStore.load(null, pp.getPassword());
+			Enumeration aliases = keyStore.aliases();
+			while (aliases.hasMoreElements()) {
+				Object alias = aliases.nextElement();
+				try {
+					X509Certificate cert0 = (X509Certificate) keyStore.getCertificate(alias.toString());
+					logger.info("I am: " + cert0.getSubjectDN().getName());
+					PrivateKey privateKey = (PrivateKey) keyStore.getKey(alias.toString(), pin);
+					logger.info("Private key: " + privateKey);
+				} catch (Exception e) {
+					continue;
+				}
+			}
+			KeyStore.PrivateKeyEntry privateKeyEntry = (KeyStore.PrivateKeyEntry) keyStore.getEntry("Signature", null);
+			Signature signature = Signature.getInstance("SHA1withRSA");
+			signature.initSign(privateKeyEntry.getPrivateKey());
+			byte[] toBeSigned = "hello world".getBytes();
+			signature.update(toBeSigned);
+			byte[] signatureValue = signature.sign();
+			logger.info(Base64.encode(signatureValue));
+			Security.removeProvider(provider.getName());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void testSmccGetCertificates() throws InfrastructureException, KeyStoreException {
+		SmccInfrastructure infrastructure = new SmccInfrastructure();
+		List<X509Certificate> certificates = infrastructure.getCertificates();
+		logger.info("I am: " + certificates.get(0).getSubjectDN().getName());
+	}
 }

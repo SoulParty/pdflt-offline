@@ -3,6 +3,7 @@ package lt.nortal.pdflt;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.security.Security;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
@@ -25,6 +26,7 @@ import iaik.pkcs.pkcs11.objects.X509PublicKeyCertificate;
 import iaik.pkcs.pkcs11.provider.Constants;
 import iaik.pkcs.pkcs11.provider.IAIKPkcs11;
 import iaik.pkcs.pkcs11.wrapper.PKCS11Constants;
+import iaik.security.provider.IAIK;
 import lt.nortal.components.unisign.applet.SigningApplet;
 import lt.nortal.components.unisign.applet.infrastructure.InfrastructureException;
 import lt.nortal.components.unisign.applet.infrastructure.SignatureInfrastructure;
@@ -41,10 +43,11 @@ public class MacPKCS11Infrastructure implements SignatureInfrastructure {
 	private Object[] matchingKeys;
 	private RSAPrivateKey searchTemplate;
 	private final int MAX_OBJECTS_TO_FIND = 10;
-	private final int SLOT_NUMBER = 0; //TODO this needs a GUI selection by user
+	private final int SLOT_NUMBER = 1; //TODO this needs a GUI selection by user
 
 	public MacPKCS11Infrastructure(String pin, String nativeModulePath, String nativeWrapperPath) {
 		try {
+			Security.addProvider(new IAIK());
 			Properties properties = new Properties();
 			properties.put(Constants.PKCS11_NATIVE_MODULE, nativeModulePath);
 			properties.put(Constants.PKCS11_WRAPPER_PATH, nativeWrapperPath);
@@ -121,7 +124,7 @@ public class MacPKCS11Infrastructure implements SignatureInfrastructure {
 						X509PublicKeyCertificate cert = (X509PublicKeyCertificate) certificate;
 						String pem = convertToPem(cert.getValue().toString());
 						InputStream stream = new ByteArrayInputStream(pem.getBytes("UTF-8"));
-						CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+						CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509", "IAIK");
 
 						certificates.add((X509Certificate) certificateFactory.generateCertificate(stream));
 					}
