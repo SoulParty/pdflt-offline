@@ -9,23 +9,4 @@
           http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd">
 
     <context:property-placeholder location="classpath:configuration.properties" />
-
-    <bean id="crlCachingClient" class="lt.nortal.rc.unisign.util.crl.CrlCachingClient" />
-
-    <bean id="certificateChainService" class="lt.nortal.rc.unisign.util.cert.CertificateChainServiceImpl">
-        <property name="trustedCertificateLocation" value="/certificates/trusted/*"/>
-        <property name="initiallyCachedCertificateLocation" value="/certificates/cached/*"/>
-    </bean>
-
-    <bean id="ocspService" class="lt.nortal.rc.unisign.util.ocsp.OcspServiceImpl">
-        <property name="ocspUrlResolvers">
-            <list>
-                <bean class="lt.nortal.rc.unisign.util.ocsp.OcspUrlCertificateResolver"/>
-                <bean class="lt.nortal.rc.unisign.util.ocsp.OcspUrlIssuerPolicyOIDResolver">
-                    <property name="issuerPolicyOID" value="1.3.6.1.4.1.10015.*"/>
-                    <property name="url" value="${sk.ocsp.url}"/>
-                </bean>
-            </list>
-        </property>
-    </bean>
 </beans>
