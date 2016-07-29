@@ -20,6 +20,7 @@ import lt.nortal.components.unisign.utils.Base64;
 import lt.nortal.pdflt.domain.PresignData;
 import lt.nortal.pdflt.domain.SignatureProperties;
 import lt.nortal.pdflt.service.PdfService;
+import lt.nortal.pdflt.service.impl.PdfLtServiceImpl;
 import lt.nortal.pdflt.utils.PdfLtHelper;
 
 import com.itextpdf.text.pdf.PdfReader;
@@ -68,7 +69,7 @@ public class FormView extends javax.swing.JFrame {
 	@Autowired
 	private SigningService signingService;
 
-	@Autowired
+//	@Autowired
 	private PdfService pdfLtService;
 
 	@Value("${edelivery.rest.endpoint}")
@@ -76,6 +77,7 @@ public class FormView extends javax.swing.JFrame {
 
 	public FormView() {
 		initComponents();
+		pdfLtService = new PdfLtServiceImpl();
 	}
 
 	/**
